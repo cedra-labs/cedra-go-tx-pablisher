@@ -1,6 +1,8 @@
 package cedra
 
-import "errors"
+import (
+	"errors"
+)
 
 const (
 	DevnetChainID  ChainID = 3
@@ -28,14 +30,14 @@ type ChainConfig map[ChainID]Chain
 var CedraChains = ChainConfig{
 	DevnetChainID: {
 		ChainID:      DevnetChainID,
-		CedraNodeUrl: "",
+		CedraNodeUrl: "https://devnet.cedra.dev/v1/",
 	},
 	TestnetChainID: {
 		ChainID:      TestnetChainID,
-		CedraNodeUrl: "",
+		CedraNodeUrl: "https://testnet.cedra.dev/v1/",
 	},
 	MainnetChainID: {
 		ChainID:      MainnetChainID,
-		CedraNodeUrl: "",
+		CedraNodeUrl: "https://mainnet.cedra.dev/v1/",
 	},
 }

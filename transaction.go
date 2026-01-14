@@ -9,8 +9,9 @@ import (
 )
 
 const (
-	CedraCoin         = "0x1::cedra_coin::CedraCoin"
-	transactionPrefix = "CEDRA::RawTransaction"
+	CedraCoin               = "0x1::cedra_coin::CedraCoin"
+	transactionPrefix       = "CEDRA::RawTransaction"
+	txVariant         uint8 = 0
 )
 
 type Transaction struct {
@@ -25,34 +26,27 @@ type Transaction struct {
 	Auth                       TxAuthorizer
 }
 
-func NewRawTransaction(sender Account, payload TransactionPayload) *Transaction {
-	sequenceNumber := uint64(1) // TODO get number
-
-	return &Transaction{
-		Sender:         sender,
-		SequenceNumber: sequenceNumber,
-		Payload:        payload,
-		FaAddress:      CedraCoin,
-	}
-}
-
 func (tx *Transaction) SetFeeCoin(coin string) {
 	tx.FaAddress = coin
 }
 
-func (tx *Transaction) Sign() {
+func (tx *Transaction) Sign() []byte {
 	bcs := NewBCSEncoder()
 	bcs.WriteRawBytes(tx.Sender.AccountAddress[:])
 	bcs.WriteRawBytes(EncodeUintToBCS(tx.SequenceNumber))
+	// Encode Tx payload.
+	// Encode entry function.
 	bcs.WriteRawBytes(tx.Payload.ModuleAddress[:])
 	EncodeToBCSString(tx.Payload.ModuleName, bcs)
 	EncodeToBCSString(tx.Payload.FunctionName, bcs)
 	// txn.Payload.MarshalBCS(ser) // TODO: ???
+	// Encode tx payload arguments.
 	argsLen := cast.ToUint8(len(tx.Payload.Argumments))
 	bcs.Uleb128(argsLen)
 	for _, a := range tx.Payload.Argumments {
 		bcs.WriteRawBytes(a)
 	}
+	// Encode tx params.
 	bcs.WriteRawBytes(EncodeUintToBCS(tx.MaxGasAmount))
 	bcs.WriteRawBytes(EncodeUintToBCS(tx.GasUnitPrice))
 	bcs.WriteRawBytes(EncodeUintToBCS(tx.ExpirationTimestampSeconds))
@@ -69,6 +63,10 @@ func (tx *Transaction) Sign() {
 	sigBytes := ed25519.Sign(tx.Sender.PrivateKey, message)
 
 	fmt.Println(sigBytes)
+
+	bcs.Uleb128(txVariant)
+
+	return bcs.GetBytes()
 }
 
 type TxAuthorizer struct{}

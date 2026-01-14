@@ -25,7 +25,7 @@ func main() {
 	bcs := cedra.NewBCSEncoder()
 
 	payload := cedra.TransactionPayload{
-		ModuleAddress: [32]byte([]byte("0x1")),
+		ModuleAddress: [32]byte{},
 		ModuleName:    "cedra_account",
 		FunctionName:  "transfer",
 		Argumments: [][]byte{
@@ -34,13 +34,13 @@ func main() {
 		},
 	}
 
-	rawTx := cedra.NewRawTransaction(sender, payload)
-	rawTx.Sign()
+	rawTx, err := cedraClient.NewTransaction(sender, payload)
+	encodedTX := rawTx.Sign()
 
-	err = cedraClient.SubmitTransaction(*rawTx)
+	hash, err := cedraClient.SubmitTransaction(encodedTX)
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Println(rawTx)
+	fmt.Println(hash)
 }
