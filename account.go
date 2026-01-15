@@ -46,6 +46,6 @@ func NewAccount(hexKey string) (Account, error) {
 	}, nil
 }
 
-func (a Account) GetAccounAddressString() string {
+func (a Account) GetAccountAddressString() string {
 	return hex.EncodeToString(a.AccountAddress[:])
 }

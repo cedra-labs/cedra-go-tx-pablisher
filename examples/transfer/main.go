@@ -23,8 +23,6 @@ func main() {
 		panic(err)
 	}
 
-	// bcs := cedra.NewBCSEncoder()
-
 	bytes, err := hex.DecodeString("0000000000000000000000000000000000000000000000000000000000000001")
 	if err != nil {
 		panic(err)
@@ -48,9 +46,9 @@ func main() {
 	}
 
 	rawTx, err := cedraClient.NewTransaction(sender, payload)
-	encodedTx, auth := rawTx.Sign()
+	encodedTx, authenticator := rawTx.Sign()
 
-	hash, err := cedraClient.SubmitTransaction(encodedTx, auth)
+	hash, err := cedraClient.SubmitTransaction(encodedTx, authenticator)
 	if err != nil {
 		panic(err)
 	}

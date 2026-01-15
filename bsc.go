@@ -16,10 +16,6 @@ func NewBCSEncoder() *BCSEncoder {
 	return &BCSEncoder{}
 }
 
-func (bcs *BCSEncoder) EncodeHexBytes(value []byte) {
-
-}
-
 func (bcs *BCSEncoder) WriteRawBytes(value []byte) {
 	bcs.buf.Write(value)
 }
@@ -28,22 +24,52 @@ func (bcs *BCSEncoder) GetBytes() []byte {
 	return bcs.buf.Bytes()
 }
 
-func (bcs *BCSEncoder) Uleb128(val uint8) {
-	for val>>7 != 0 {
-		bcs.buf.WriteByte((val & 0x7F) | 0x80)
-		val >>= 7
-	}
-
-	bcs.buf.WriteByte(val & 0x7F)
+func (bcs *BCSEncoder) Reset() {
+	bcs.buf.Reset()
 }
 
-func EncodeToBCSString(value string, enc *BCSEncoder) []byte {
+func (bcs *BCSEncoder) EncodeEnum(value uint64) {
+	for value >= 0x80 {
+		bcs.buf.WriteByte(byte(value&0x7F) | 0x80)
+		value >>= 7
+	}
+
+	bcs.buf.WriteByte(byte(value & 0x7F))
+}
+
+func (bcs *BCSEncoder) EncodeString(value string) {
 	byteValue := []byte(value)
 	length := len(byteValue)
-	enc.Uleb128(cast.ToUint8(length))
-	enc.buf.Write(byteValue)
+	bcs.EncodeEnum(cast.ToUint64(length))
+	bcs.buf.Write(byteValue)
+}
 
-	return enc.GetBytes()
+func (bcs *BCSEncoder) EnncodeBytes(data []byte) {
+	bcs.EncodeEnum(cast.ToUint64(len(data)))
+	bcs.WriteRawBytes(data)
+}
+
+func EnncodeToBCSBytes(data []byte) []byte {
+	bcs := NewBCSEncoder()
+	defer bcs.buf.Reset()
+
+	bcs.EncodeEnum(cast.ToUint64(len(data)))
+	bcs.WriteRawBytes(data)
+	buff := bcs.GetBytes()
+
+	return buff
+}
+
+func EncodeToBCSString(value string) []byte {
+	bcs := NewBCSEncoder()
+	defer bcs.buf.Reset()
+
+	byteValue := []byte(value)
+	length := len(byteValue)
+	bcs.EncodeEnum(cast.ToUint64(length))
+	bcs.buf.Write(byteValue)
+
+	return bcs.GetBytes()
 }
 
 func EncodeUintToBCS[Type uint8 | uint16 | uint32 | uint64](value Type) []byte {
@@ -92,8 +118,4 @@ func EncodeIntToBCS[Type int8 | int16 | int32 | int64](value Type) []byte {
 	}
 
 	panic(errors.New("EncodeIntToBCS: invalid received type"))
-}
-
-type Uint interface {
-	~uint8 | ~uint16 | ~uint32 | ~uint64
 }

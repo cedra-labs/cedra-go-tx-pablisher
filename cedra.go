@@ -1,7 +1,6 @@
 package cedra
 
 import (
-	"encoding/hex"
 	"sync"
 	"time"
 
@@ -10,6 +9,8 @@ import (
 
 const (
 	defaultMaxGasAmount = uint64(100_000)
+	// CedraAddress        = "0x0000000000000000000000000000000000000000000000000000000000000001"
+	CedraCoin = "0x0000000000000000000000000000000000000000000000000000000000000001::cedra_coin::CedraCoin"
 )
 
 type CedraClient struct {
@@ -34,7 +35,7 @@ func (c CedraClient) NewTransaction(sender Account, payload TransactionPayload) 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		sequenceNumber, err = c.node.GetSequenceNumber(sender.GetAccounAddressString())
+		sequenceNumber, err = c.node.GetSequenceNumber(sender.GetAccountAddressString())
 	}()
 
 	wg.Add(1)
@@ -58,23 +59,16 @@ func (c CedraClient) NewTransaction(sender Account, payload TransactionPayload) 
 	if err != nil {
 		return nil, err // TODO:
 	}
-	bytes, err := hex.DecodeString("0000000000000000000000000000000000000000000000000000000000000001")
+	structTag, err := NewStringStructTag(CedraCoin)
 	if err != nil {
-		panic(err)
+		return nil, err // TODO:
 	}
 
-	var mAdd [32]byte
-	copy((mAdd)[32-len(bytes):], bytes)
-
 	return &Transaction{
-		Sender:         sender,
-		SequenceNumber: sequenceNumber,
-		Payload:        payload,
-		FaAddress: StructTag{
-			Address: mAdd,
-			Module:  "cedra_coin",
-			Name:    "CedraCoin",
-		},
+		Sender:                     sender,
+		SequenceNumber:             sequenceNumber,
+		Payload:                    payload,
+		FaAddress:                  structTag,
 		GasUnitPrice:               gasUnitPrice,
 		MaxGasAmount:               defaultMaxGasAmount,
 		ExpirationTimestampSeconds: expirationSeconds,
@@ -82,16 +76,16 @@ func (c CedraClient) NewTransaction(sender Account, payload TransactionPayload) 
 	}, nil
 }
 
-func (c CedraClient) SubmitTransaction(tx []byte, auth TxAuthorizer) (string, error) {
+func (c CedraClient) SubmitTransaction(tx []byte, auth CedraAuthenticator) (string, error) {
 	bcs := NewBCSEncoder()
-	bcs.Uleb128(txVariant)
+	bcs.EncodeEnum(cast.ToUint64(txVariant))
 	//pub
-	length := cast.ToUint8(len(auth.Auth.PKey))
-	bcs.Uleb128(length)
+	length := cast.ToUint64(len(auth.Auth.PKey))
+	bcs.EncodeEnum(length)
 	bcs.WriteRawBytes(auth.Auth.PKey)
 	//sig
-	length = cast.ToUint8(len(auth.Auth.Signature))
-	bcs.Uleb128(length)
+	length = cast.ToUint64(len(auth.Auth.Signature))
+	bcs.EncodeEnum(length)
 	bcs.WriteRawBytes(auth.Auth.Signature)
 
 	tx = append(tx, bcs.GetBytes()...)
