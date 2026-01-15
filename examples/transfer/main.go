@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/hex"
 	"fmt"
 
 	"github.com/cedra-labs/cedra-go-tx-pablisher"
@@ -22,22 +23,34 @@ func main() {
 		panic(err)
 	}
 
-	bcs := cedra.NewBCSEncoder()
+	// bcs := cedra.NewBCSEncoder()
+
+	bytes, err := hex.DecodeString("0000000000000000000000000000000000000000000000000000000000000001")
+	if err != nil {
+		panic(err)
+	}
+
+	var mAdd [32]byte
+	copy((mAdd)[32-len(bytes):], bytes)
+
+	receiverAddr, _ := hex.DecodeString(receiverAddress)
+	var addr [32]byte
+	copy((addr)[32-len(bytes):], receiverAddr)
 
 	payload := cedra.TransactionPayload{
-		ModuleAddress: [32]byte{},
+		ModuleAddress: mAdd,
 		ModuleName:    "cedra_account",
 		FunctionName:  "transfer",
 		Argumments: [][]byte{
-			cedra.EncodeToBCSString(receiverAddress, bcs),
+			addr[:],
 			cedra.EncodeUintToBCS(transferAmount),
 		},
 	}
 
 	rawTx, err := cedraClient.NewTransaction(sender, payload)
-	encodedTX := rawTx.Sign()
+	encodedTx, auth := rawTx.Sign()
 
-	hash, err := cedraClient.SubmitTransaction(encodedTX)
+	hash, err := cedraClient.SubmitTransaction(encodedTx, auth)
 	if err != nil {
 		panic(err)
 	}

@@ -107,7 +107,7 @@ func makeRequest[T any](method string, requetURL url.URL, body io.Reader, header
 		return response, err // TODO:
 	}
 
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
 		return response, errors.New(resp.Status + ": " + string(bodyBytes))
 	}
 

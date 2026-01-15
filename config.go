@@ -34,7 +34,7 @@ var CedraChains = ChainConfig{
 	},
 	TestnetChainID: {
 		ChainID:      TestnetChainID,
-		CedraNodeUrl: "https://testnet.cedra.dev/v1/",
+		CedraNodeUrl: "http://localhost:8082/v1",
 	},
 	MainnetChainID: {
 		ChainID:      MainnetChainID,

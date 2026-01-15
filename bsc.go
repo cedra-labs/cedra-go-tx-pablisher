@@ -49,9 +49,7 @@ func EncodeToBCSString(value string, enc *BCSEncoder) []byte {
 func EncodeUintToBCS[Type uint8 | uint16 | uint32 | uint64](value Type) []byte {
 	switch v := any(value).(type) {
 	case uint8:
-		buf := make([]byte, 1)
-
-		return append(buf, cast.ToUint8(v))
+		return []byte{cast.ToUint8(v)}
 	case uint16:
 		buf := make([]byte, 2)
 		binary.LittleEndian.PutUint16(buf, v)
@@ -75,9 +73,7 @@ func EncodeUintToBCS[Type uint8 | uint16 | uint32 | uint64](value Type) []byte {
 func EncodeIntToBCS[Type int8 | int16 | int32 | int64](value Type) []byte {
 	switch v := any(value).(type) {
 	case int8:
-		buf := make([]byte, 1)
-
-		return append(buf, cast.ToUint8(v))
+		return []byte{cast.ToUint8(v)}
 	case int16:
 		buf := make([]byte, 2)
 		binary.BigEndian.PutUint16(buf, cast.ToUint16(v))
