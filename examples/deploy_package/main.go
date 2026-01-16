@@ -43,22 +43,22 @@ func main() {
 		modules = append(modules, data)
 	}
 
-	serializedMeta := cedra.EnncodeToBCSBytes(metaBytes)
+	serializedMeta := cedra.EncodeToBCSBytes(metaBytes)
 	serializedModules := ModuleList(modules).EncodeModule()
-	serializedSeed := cedra.EnncodeToBCSBytes([]byte(""))
+	serializedSeed := cedra.EncodeToBCSBytes([]byte(""))
 
 	payload := cedra.TransactionPayload{
 		ModuleAddress: sender.AccountAddress,
 		ModuleName:    "deployer",
 		FunctionName:  "deploy_derived",
-		Argumments: [][]byte{
+		Arguments: [][]byte{
 			serializedMeta,
 			serializedModules,
 			serializedSeed,
 		},
 	}
 
-	rawTx, err := cedraClient.NewTransaction(sender, payload)
+	rawTx, err := cedraClient.NewTransaction(sender, &payload)
 	if err != nil {
 		panic(err)
 	}
@@ -78,7 +78,7 @@ func (m ModuleList) EncodeModule() []byte {
 	ser := cedra.NewBCSEncoder()
 	ser.EncodeEnum(cast.ToUint64(len(m))) // Length of the outer vector
 	for _, module := range m {
-		ser.EnncodeBytes(module)
+		ser.EncodeBytes(module)
 	}
 
 	return ser.GetBytes()

@@ -4,21 +4,31 @@ import (
 	"crypto/ed25519"
 	"crypto/sha3"
 	"encoding/hex"
-	"errors"
 	"strings"
+
+	"github.com/pkg/errors"
 )
 
 const (
+	// privateKeyPrefix is the prefix used for ED25519 private keys.
 	privateKeyPrefix = "ed25519-priv-"
-	keyPrefix        = "0x"
+	// keyPrefix is the hexadecimal prefix used for addresses and keys.
+	keyPrefix = "0x"
 )
 
+// Account represents a Cedra blockchain account with its cryptographic keys and address.
 type Account struct {
+	// AccountAddress is the 32-byte account address derived from the public key.
 	AccountAddress [32]byte
-	PrivateKey     ed25519.PrivateKey
-	PublicKey      ed25519.PublicKey
+	// PrivateKey is the ED25519 private key used for signing transactions.
+	PrivateKey ed25519.PrivateKey
+	// PublicKey is the ED25519 public key associated with the account.
+	PublicKey ed25519.PublicKey
 }
 
+// NewAccount creates a new Account from a hexadecimal private key string.
+// The hexKey can optionally include the "ed25519-priv-" prefix and/or "0x" prefix.
+// Returns an error if the key format is invalid or cannot be parsed.
 func NewAccount(hexKey string) (Account, error) {
 	hexKey = strings.TrimPrefix(hexKey, privateKeyPrefix)
 	hexKey = strings.TrimPrefix(hexKey, keyPrefix)
@@ -31,7 +41,7 @@ func NewAccount(hexKey string) (Account, error) {
 	privateKey := ed25519.NewKeyFromSeed(privBytes)
 	publicKey, ok := privateKey.Public().(ed25519.PublicKey)
 	if !ok {
-		return Account{}, errors.New("can't extract account piblick key from account private key")
+		return Account{}, errors.New("can't extract account public key from account private key")
 	}
 
 	hasher := sha3.New256()
@@ -47,15 +57,26 @@ func NewAccount(hexKey string) (Account, error) {
 	}, nil
 }
 
+// GetAccountAddressString returns the hexadecimal string representation of the account address.
 func (a Account) GetAccountAddressString() string {
+
 	return hex.EncodeToString(a.AccountAddress[:])
 }
 
-func NewAccountAddress(address string) [32]byte {
+// NewAccountAddress parses a hexadecimal address string and returns a 32-byte address.
+// The address can optionally include the "0x" prefix.
+// Returns an error if the address format is invalid or exceeds 32 bytes.
+func NewAccountAddress(address string) ([32]byte, error) {
 	address = strings.TrimPrefix(address, keyPrefix)
-	bytes, _ := hex.DecodeString(address)
+	bytes, err := hex.DecodeString(address)
+	if err != nil {
+		return [32]byte{}, errors.Wrap(err, "can't decode account address")
+	}
+	if len(bytes) > 32 {
+		return [32]byte{}, errors.New("account address too long")
+	}
 	var buf [32]byte
 	copy((buf)[32-len(bytes):], bytes)
 
-	return buf
+	return buf, nil
 }

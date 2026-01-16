@@ -6,22 +6,35 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cast"
 )
 
 const (
-	clientHeader                 = "X-Cedra-Client"
-	clientHeaderValue            = "cedra-tx-publisher"
+	// clientHeader is the HTTP header name for the client identifier.
+	clientHeader = "X-Cedra-Client"
+	// clientHeaderValue is the value sent in the client header.
+	clientHeaderValue = "cedra-tx-publisher"
+	// contentTypeAptosSignedTxnBcs is the content type for signed transaction BCS data.
 	contentTypeAptosSignedTxnBcs = "application/x.cedra.signed_transaction+bcs"
+	// defaultHTTPTimeout is the default timeout for HTTP requests.
+	defaultHTTPTimeout = 30 * time.Second
 )
 
+// CedraNode represents a client for communicating with a Cedra blockchain node.
 type CedraNode struct {
-	chain   Chain
+	// chain contains the chain configuration.
+	chain Chain
+	// nodeURL is the parsed URL of the Cedra node.
 	nodeURL url.URL
+	// httpClient is the HTTP client used for making requests to the node.
+	httpClient *http.Client
 }
 
+// NewCedraNode creates a new CedraNode instance for the specified chain.
+// Panics if the chain configuration is invalid or the chain ID doesn't exist.
 func NewCedraNode(chainID ChainID) CedraNode {
 	if CedraChains == nil {
 		panic(errors.New("can't create a new instance of CedraNode: invalid chain config"))
@@ -39,29 +52,36 @@ func NewCedraNode(chainID ChainID) CedraNode {
 	return CedraNode{
 		chain:   chain,
 		nodeURL: *nodeURL,
+		httpClient: &http.Client{
+			Timeout: defaultHTTPTimeout,
+		},
 	}
 }
 
+// SubmitTransaction submits a signed transaction to the Cedra node.
+// Returns the transaction hash if successful, or an error if submission fails.
 func (n CedraNode) SubmitTransaction(tx []byte) (string, error) {
-	requstBody := bytes.NewReader(tx)
+	requestBody := bytes.NewReader(tx)
 	requestURL := n.nodeURL.JoinPath("transactions")
 	headers := map[string]string{
 		"content-type": contentTypeAptosSignedTxnBcs,
 	}
 
-	hash, err := makeRequest[TransactionDTO](http.MethodPost, *requestURL, requstBody, headers)
+	hash, err := makeRequest[TransactionDTO](http.MethodPost, requestURL, requestBody, headers, n.httpClient)
 	if err != nil {
 		return "", errors.Wrap(err, "can't execute requested transaction")
 	}
+
 	return hash.Hash, nil
 }
 
+// GetEstimateGasPrice retrieves the current gas price estimates from the Cedra node.
+// Returns gas price estimates for different priority levels.
 func (n CedraNode) GetEstimateGasPrice() (EstimateGasPriceDTO, error) {
-	var requstBody io.Reader
+	var body io.Reader
 	var headers map[string]string
-
 	requestURL := n.nodeURL.JoinPath("estimate_gas_price")
-	estimateGasPrice, err := makeRequest[EstimateGasPriceDTO](http.MethodGet, *requestURL, requstBody, headers)
+	estimateGasPrice, err := makeRequest[EstimateGasPriceDTO](http.MethodGet, requestURL, body, headers, n.httpClient)
 	if err != nil {
 		return estimateGasPrice, errors.Wrap(err, "can't estimate gas price")
 	}
@@ -69,13 +89,13 @@ func (n CedraNode) GetEstimateGasPrice() (EstimateGasPriceDTO, error) {
 	return estimateGasPrice, nil
 }
 
+// GetSequenceNumber retrieves the current sequence number for the specified account address.
+// Returns the sequence number as a uint64, or an error if the request fails.
 func (n CedraNode) GetSequenceNumber(address string) (uint64, error) {
-	var requstBody io.Reader
+	var body io.Reader
 	var headers map[string]string
-
 	requestURL := n.nodeURL.JoinPath("accounts", address)
-
-	accountInfo, err := makeRequest[AccountDTO](http.MethodGet, *requestURL, requstBody, headers)
+	accountInfo, err := makeRequest[AccountDTO](http.MethodGet, requestURL, body, headers, n.httpClient)
 	if err != nil {
 		return 0, errors.Wrap(err, "can't get account info")
 	}
@@ -83,9 +103,12 @@ func (n CedraNode) GetSequenceNumber(address string) (uint64, error) {
 	return cast.ToUint64(accountInfo.SequenceNumber), nil
 }
 
-func makeRequest[T any](method string, requetURL url.URL, body io.Reader, headers map[string]string) (T, error) {
+// makeRequest performs an HTTP request to the Cedra node and unmarshals the JSON response.
+// It is a generic function that can handle different response types.
+// Returns the unmarshaled response or an error if the request fails.
+func makeRequest[T any](method string, requestURL *url.URL, body io.Reader, headers map[string]string, client *http.Client) (T, error) {
 	var response T
-	req, err := http.NewRequest(method, requetURL.String(), body)
+	req, err := http.NewRequest(method, requestURL.String(), body)
 	if err != nil {
 		return response, errors.Wrap(err, "can't create a new request")
 	}
@@ -95,11 +118,10 @@ func makeRequest[T any](method string, requetURL url.URL, body io.Reader, header
 		req.Header.Set(header, value)
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		return response, errors.Wrap(err, "can't execute request")
 	}
-
 	defer resp.Body.Close()
 
 	bodyBytes, err := io.ReadAll(resp.Body)
@@ -111,9 +133,8 @@ func makeRequest[T any](method string, requetURL url.URL, body io.Reader, header
 		return response, errors.New(resp.Status + ": " + string(bodyBytes))
 	}
 
-	err = json.Unmarshal(bodyBytes, &response)
-	if err != nil {
-		return response, errors.Wrap(err, "can't unarshal response to object")
+	if err := json.Unmarshal(bodyBytes, &response); err != nil {
+		return response, errors.Wrap(err, "can't unmarshal response to object")
 	}
 
 	return response, nil

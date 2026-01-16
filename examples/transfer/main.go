@@ -22,20 +22,26 @@ func main() {
 		panic(err)
 	}
 
-	moduleAddress := cedra.NewAccountAddress(cedra.CedraAddress)
-	receiverAddr := cedra.NewAccountAddress(receiverAddress)
+	moduleAddress, err := cedra.NewAccountAddress(cedra.CedraAddress)
+	if err != nil {
+		panic(err)
+	}
+	receiverAddr, err := cedra.NewAccountAddress(receiverAddress)
+	if err != nil {
+		panic(err)
+	}
 
 	payload := cedra.TransactionPayload{
 		ModuleAddress: moduleAddress,
 		ModuleName:    "cedra_account",
 		FunctionName:  "transfer",
-		Argumments: [][]byte{
+		Arguments: [][]byte{
 			receiverAddr[:],
 			cedra.EncodeUintToBCS(transferAmount),
 		},
 	}
 
-	rawTx, err := cedraClient.NewTransaction(sender, payload)
+	rawTx, err := cedraClient.NewTransaction(sender, &payload)
 	encodedTx, authenticator := rawTx.Sign()
 
 	hash, err := cedraClient.SubmitTransaction(encodedTx, authenticator)
