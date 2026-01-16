@@ -2,8 +2,9 @@ package cedra
 
 import (
 	"encoding/hex"
-	"errors"
 	"strings"
+
+	"github.com/pkg/errors"
 )
 
 const (
@@ -21,11 +22,11 @@ type StructTag struct {
 func NewStringStructTag(tag string) (StructTag, error) {
 	parts := strings.Split(tag, tagSeparator)
 	if len(parts) != 3 {
-		return StructTag{}, errors.New("") // TODO:
+		return StructTag{}, errors.New("can't create new struct tag: invalid struct tag")
 	}
 	bytes, err := hex.DecodeString(strings.TrimPrefix(parts[0], "0x"))
 	if err != nil {
-		return StructTag{}, err // TODO:
+		return StructTag{}, errors.Wrap(err, "can't create new struct tag: invalid module address")
 	}
 
 	buf := [32]byte{}

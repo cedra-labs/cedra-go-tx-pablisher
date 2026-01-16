@@ -14,7 +14,7 @@ type ChainID uint8
 
 func NewLocalnetChainID(id uint8) ChainID {
 	if id == 0 {
-		panic(errors.New("")) // TODO:
+		panic(errors.New("can't create new chain id: chain id should be greater than 0"))
 	}
 
 	return ChainID(id)
@@ -34,7 +34,7 @@ var CedraChains = ChainConfig{
 	},
 	TestnetChainID: {
 		ChainID:      TestnetChainID,
-		CedraNodeUrl: "http://localhost:8082/v1",
+		CedraNodeUrl: "https://testnet.cedra.dev/v1/",
 	},
 	MainnetChainID: {
 		ChainID:      MainnetChainID,

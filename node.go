@@ -24,16 +24,16 @@ type CedraNode struct {
 
 func NewCedraNode(chainID ChainID) CedraNode {
 	if CedraChains == nil {
-		panic(errors.New("")) // TODO:
+		panic(errors.New("can't create a new instance of CedraNode: invalid chain config"))
 	}
 
 	chain, ok := CedraChains[chainID]
 	if !ok {
-		panic(errors.New("")) // TODO:
+		panic(errors.New("can't create a new instance of CedraNode: requested chain doesn't exist"))
 	}
 	nodeURL, err := url.Parse(chain.CedraNodeUrl)
 	if err != nil {
-		panic(err) // TODO: // TODO:
+		panic(errors.Wrapf(err, "can't create a new instance of CedraNode"))
 	}
 
 	return CedraNode{
@@ -51,7 +51,7 @@ func (n CedraNode) SubmitTransaction(tx []byte) (string, error) {
 
 	hash, err := makeRequest[TransactionDTO](http.MethodPost, *requestURL, requstBody, headers)
 	if err != nil {
-		return "", err // TODO:
+		return "", errors.Wrap(err, "can't execute requested transaction")
 	}
 	return hash.Hash, nil
 }
@@ -63,7 +63,7 @@ func (n CedraNode) GetEstimateGasPrice() (EstimateGasPriceDTO, error) {
 	requestURL := n.nodeURL.JoinPath("estimate_gas_price")
 	estimateGasPrice, err := makeRequest[EstimateGasPriceDTO](http.MethodGet, *requestURL, requstBody, headers)
 	if err != nil {
-		return estimateGasPrice, err // TODO:
+		return estimateGasPrice, errors.Wrap(err, "can't estimate gas price")
 	}
 
 	return estimateGasPrice, nil
@@ -77,7 +77,7 @@ func (n CedraNode) GetSequenceNumber(address string) (uint64, error) {
 
 	accountInfo, err := makeRequest[AccountDTO](http.MethodGet, *requestURL, requstBody, headers)
 	if err != nil {
-		return 0, err // TODO:
+		return 0, errors.Wrap(err, "can't get account info")
 	}
 
 	return cast.ToUint64(accountInfo.SequenceNumber), nil
@@ -85,9 +85,9 @@ func (n CedraNode) GetSequenceNumber(address string) (uint64, error) {
 
 func makeRequest[T any](method string, requetURL url.URL, body io.Reader, headers map[string]string) (T, error) {
 	var response T
-	req, err := http.NewRequest(method, requetURL.String(), body) // http.MethodGet , body - nil
+	req, err := http.NewRequest(method, requetURL.String(), body)
 	if err != nil {
-		return response, err // TODO:
+		return response, errors.Wrap(err, "can't create a new request")
 	}
 
 	req.Header.Set(clientHeader, clientHeaderValue)
@@ -97,14 +97,14 @@ func makeRequest[T any](method string, requetURL url.URL, body io.Reader, header
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return response, err // TODO:
+		return response, errors.Wrap(err, "can't execute request")
 	}
 
 	defer resp.Body.Close()
 
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return response, err // TODO:
+		return response, errors.Wrap(err, "can't read request response body")
 	}
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {

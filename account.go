@@ -4,6 +4,7 @@ import (
 	"crypto/ed25519"
 	"crypto/sha3"
 	"encoding/hex"
+	"errors"
 	"strings"
 )
 
@@ -30,7 +31,7 @@ func NewAccount(hexKey string) (Account, error) {
 	privateKey := ed25519.NewKeyFromSeed(privBytes)
 	publicKey, ok := privateKey.Public().(ed25519.PublicKey)
 	if !ok {
-		return Account{}, nil // TODO:
+		return Account{}, errors.New("can't extract account piblick key from account private key")
 	}
 
 	hasher := sha3.New256()
@@ -48,4 +49,13 @@ func NewAccount(hexKey string) (Account, error) {
 
 func (a Account) GetAccountAddressString() string {
 	return hex.EncodeToString(a.AccountAddress[:])
+}
+
+func NewAccountAddress(address string) [32]byte {
+	address = strings.TrimPrefix(address, keyPrefix)
+	bytes, _ := hex.DecodeString(address)
+	var buf [32]byte
+	copy((buf)[32-len(bytes):], bytes)
+
+	return buf
 }

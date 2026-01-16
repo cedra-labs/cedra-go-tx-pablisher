@@ -49,6 +49,16 @@ func (bcs *BCSEncoder) EnncodeBytes(data []byte) {
 	bcs.WriteRawBytes(data)
 }
 
+func (bcs *BCSEncoder) GetMessageLen() int {
+	return bcs.buf.Len()
+}
+
+func (bcs *BCSEncoder) SetMessageLen(msgLen uint8) {
+	newBuf := append(EncodeUintToBCS(msgLen), bcs.buf.Bytes()...)
+	bcs.buf.Reset()
+	bcs.WriteRawBytes(newBuf)
+}
+
 func EnncodeToBCSBytes(data []byte) []byte {
 	bcs := NewBCSEncoder()
 	defer bcs.buf.Reset()

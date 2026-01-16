@@ -12,7 +12,7 @@ import (
 
 const (
 	// sender/deployer private key.
-	privateKey = "85f54f983bd8adcf9aae6729d5075e97ce2d4e6cc4c70eb430c7b80892dd8073"
+	privateKey = "your_private_key"
 )
 
 func main() {

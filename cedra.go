@@ -4,13 +4,14 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/spf13/cast"
 )
 
 const (
 	defaultMaxGasAmount = uint64(100_000)
-	// CedraAddress        = "0x0000000000000000000000000000000000000000000000000000000000000001"
-	CedraCoin = "0x0000000000000000000000000000000000000000000000000000000000000001::cedra_coin::CedraCoin"
+	CedraAddress        = "0x0000000000000000000000000000000000000000000000000000000000000001"
+	CedraCoin           = "0x0000000000000000000000000000000000000000000000000000000000000001::cedra_coin::CedraCoin"
 )
 
 type CedraClient struct {
@@ -57,11 +58,11 @@ func (c CedraClient) NewTransaction(sender Account, payload TransactionPayload) 
 	wg.Wait()
 
 	if err != nil {
-		return nil, err // TODO:
+		return nil, errors.Wrap(err, "can't create new transaction")
 	}
 	structTag, err := NewStringStructTag(CedraCoin)
 	if err != nil {
-		return nil, err // TODO:
+		return nil, errors.Wrap(err, "can't create new transaction: invalid struct tag")
 	}
 
 	return &Transaction{
@@ -77,18 +78,7 @@ func (c CedraClient) NewTransaction(sender Account, payload TransactionPayload) 
 }
 
 func (c CedraClient) SubmitTransaction(tx []byte, auth CedraAuthenticator) (string, error) {
-	bcs := NewBCSEncoder()
-	bcs.EncodeEnum(cast.ToUint64(txVariant))
-	//pub
-	length := cast.ToUint64(len(auth.Auth.PKey))
-	bcs.EncodeEnum(length)
-	bcs.WriteRawBytes(auth.Auth.PKey)
-	//sig
-	length = cast.ToUint64(len(auth.Auth.Signature))
-	bcs.EncodeEnum(length)
-	bcs.WriteRawBytes(auth.Auth.Signature)
-
-	tx = append(tx, bcs.GetBytes()...)
+	tx = append(tx, auth.EncodeBSC()...)
 
 	hash, err := c.node.SubmitTransaction(tx)
 	if err != nil {

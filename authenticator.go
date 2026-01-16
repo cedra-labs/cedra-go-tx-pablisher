@@ -1,17 +1,41 @@
 package cedra
 
+import "github.com/spf13/cast"
+
 const (
-	txVariant uint8 = 0
+	txVariant uint64 = 0
 )
 
 type CedraAuthenticator struct {
-	Variant uint8
+	Variant uint64
 	Auth    SenderAuth
+}
+
+func (a CedraAuthenticator) EncodeBSC() []byte {
+	bcs := NewBCSEncoder()
+	defer bcs.buf.Reset()
+	bcs.EncodeEnum(a.Variant)
+	bcs.WriteRawBytes(a.Auth.EncodeBSC())
+
+	return bcs.GetBytes()
 }
 
 type SenderAuth struct {
 	PKey      []byte
 	Signature []byte
+}
+
+func (a SenderAuth) EncodeBSC() []byte {
+	bcs := NewBCSEncoder()
+	defer bcs.buf.Reset()
+	length := cast.ToUint64(len(a.PKey))
+	bcs.EncodeEnum(length)
+	bcs.WriteRawBytes(a.PKey)
+	length = cast.ToUint64(len(a.Signature))
+	bcs.EncodeEnum(length)
+	bcs.WriteRawBytes(a.Signature)
+
+	return bcs.GetBytes()
 }
 
 func NewSenderAuth(pKey []byte, signature []byte) SenderAuth {
