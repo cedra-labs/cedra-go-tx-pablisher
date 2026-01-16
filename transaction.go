@@ -44,6 +44,7 @@ func (tx *Transaction) SetFeeCoin(coin string) error {
 // Returns the serialized byte representation of the transaction.
 func (tx *Transaction) ToBCSBytes() []byte {
 	bcs := NewBCSEncoder()
+	defer bcs.buf.Reset()
 	bcs.WriteRawBytes(tx.Sender.AccountAddress[:])
 	bcs.WriteRawBytes(EncodeUintToBCS(tx.SequenceNumber))
 	bcs.WriteRawBytes(tx.Payload.ToBCSBytes())

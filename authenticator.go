@@ -19,6 +19,7 @@ type CedraAuthenticator struct {
 // Returns the serialized byte representation of the authenticator.
 func (a CedraAuthenticator) EncodeBSC() []byte {
 	bcs := NewBCSEncoder()
+	defer bcs.buf.Reset()
 	bcs.EncodeEnum(a.Variant)
 	bcs.WriteRawBytes(a.Auth.EncodeBSC())
 
@@ -37,6 +38,7 @@ type SenderAuth struct {
 // Returns the serialized byte representation of the authentication data.
 func (a SenderAuth) EncodeBSC() []byte {
 	bcs := NewBCSEncoder()
+	defer bcs.buf.Reset()
 	bcs.EncodeEnum(cast.ToUint64(len(a.PKey)))
 	bcs.WriteRawBytes(a.PKey)
 	bcs.EncodeEnum(cast.ToUint64(len(a.Signature)))

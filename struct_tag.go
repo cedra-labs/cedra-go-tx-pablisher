@@ -54,6 +54,7 @@ func NewStringStructTag(tag string) (StructTag, error) {
 // Returns the serialized byte representation of the struct tag.
 func (st *StructTag) ToBCSBytes() []byte {
 	bcs := NewBCSEncoder()
+	defer bcs.buf.Reset()
 	bcs.EncodeEnum(structTagVariant)
 	bcs.WriteRawBytes(st.Address[:])
 	bcs.EncodeString(st.Module)

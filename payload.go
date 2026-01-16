@@ -26,6 +26,7 @@ type TransactionPayload struct {
 // Returns the serialized byte representation of the payload.
 func (p *TransactionPayload) ToBCSBytes() []byte {
 	bcs := NewBCSEncoder()
+	defer bcs.buf.Reset()
 	bcs.EncodeEnum(transactionPayloadVariant)
 	bcs.WriteRawBytes(p.ModuleAddress[:])
 	bcs.EncodeString(p.ModuleName)

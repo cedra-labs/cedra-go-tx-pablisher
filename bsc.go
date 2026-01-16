@@ -78,6 +78,7 @@ func (bcs *BCSEncoder) SetMessageLen(msgLen uint8) {
 // This is a convenience function that creates a new encoder, encodes the data, and returns the result.
 func EncodeToBCSBytes(data []byte) []byte {
 	bcs := NewBCSEncoder()
+	defer bcs.buf.Reset()
 	bcs.EncodeEnum(cast.ToUint64(len(data)))
 	bcs.WriteRawBytes(data)
 
@@ -88,6 +89,7 @@ func EncodeToBCSBytes(data []byte) []byte {
 // This is a convenience function that creates a new encoder, encodes the string, and returns the result.
 func EncodeToBCSString(value string) []byte {
 	bcs := NewBCSEncoder()
+	defer bcs.buf.Reset()
 	byteValue := []byte(value)
 	bcs.EncodeEnum(cast.ToUint64(len(byteValue)))
 	bcs.buf.Write(byteValue)
