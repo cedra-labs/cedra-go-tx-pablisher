@@ -14,6 +14,8 @@ const (
 	privateKeyPrefix = "ed25519-priv-"
 	// keyPrefix is the hexadecimal prefix used for addresses and keys.
 	keyPrefix = "0x"
+
+	deriveResourceAccountSchema = 0xFF
 )
 
 // Account represents a Cedra blockchain account with its cryptographic keys and address.
@@ -59,7 +61,6 @@ func NewAccount(hexKey string) (Account, error) {
 
 // GetAccountAddressString returns the hexadecimal string representation of the account address.
 func (a Account) GetAccountAddressString() string {
-
 	return hex.EncodeToString(a.AccountAddress[:])
 }
 
@@ -77,6 +78,25 @@ func NewAccountAddress(address string) ([32]byte, error) {
 	}
 	var buf [32]byte
 	copy((buf)[32-len(bytes):], bytes)
+
+	return buf, nil
+}
+
+func NewResourceAccount(accountAddress [32]byte, seed []byte) ([32]byte, error) {
+	var buf [32]byte
+
+	if len(accountAddress) != 32 {
+		return buf, errors.New("account address must be 32 bytes")
+	}
+
+	data := make([]byte, 0, 32+len(seed)+1)
+	data = append(data, accountAddress[:]...)
+	data = append(data, seed...)
+	data = append(data, deriveResourceAccountSchema)
+
+	hash := sha3.New256()
+	hash.Write(data)
+	copy(buf[:], hash.Sum(nil))
 
 	return buf, nil
 }
