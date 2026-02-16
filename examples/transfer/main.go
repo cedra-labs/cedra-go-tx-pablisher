@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/cedra-labs/cedra-go-tx-pablisher"
@@ -15,6 +16,7 @@ const (
 )
 
 func main() {
+	ctx := context.TODO()
 	cedraClient := cedra.NewCedraClient(cedra.TestnetChainID)
 
 	sender, err := cedra.NewAccount(privateKey)
@@ -49,5 +51,10 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Println(hash)
+	isExecuted, err := cedraClient.IsTxExecuted(ctx, hash)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("executed", isExecuted, hash)
 }

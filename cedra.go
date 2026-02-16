@@ -3,6 +3,7 @@
 package cedra
 
 import (
+	"context"
 	"time"
 
 	"github.com/pkg/errors"
@@ -16,6 +17,10 @@ const (
 	CedraAddress = "0x0000000000000000000000000000000000000000000000000000000000000001"
 	// CedraCoin is the full struct tag for the Cedra coin type.
 	CedraCoin = "0x0000000000000000000000000000000000000000000000000000000000000001::cedra_coin::CedraCoin"
+
+	executedTx = "Executed successfully"
+
+	pendingTx = "pending_transaction"
 )
 
 // CedraClient is the main client for interacting with the Cedra blockchain.
@@ -109,4 +114,27 @@ func (c CedraClient) SubmitTransaction(tx []byte, auth CedraAuthenticator) (stri
 	}
 
 	return hash, nil
+}
+
+func (c CedraClient) IsTxExecuted(ctx context.Context, txHash string) (bool, error) {
+	const period = 100 * time.Millisecond
+	const timeoutDuration = 15 * time.Second
+	ctx, cancel := context.WithTimeout(ctx, timeoutDuration)
+	defer cancel()
+
+	ticker := time.NewTicker(period)
+	for {
+		select {
+		case <-ctx.Done():
+			return false, errors.New("transaction timeout")
+		case <-ticker.C:
+			tx, err := c.node.WaitTxByHash(txHash)
+			if err != nil {
+				return false, errors.Wrap(err, "can't wait for transaction")
+			}
+			if tx.VMStatus == executedTx && tx.TxType != pendingTx {
+				return true, nil
+			}
+		}
+	}
 }

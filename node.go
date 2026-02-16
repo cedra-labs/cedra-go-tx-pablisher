@@ -103,6 +103,19 @@ func (n CedraNode) GetSequenceNumber(address string) (uint64, error) {
 	return cast.ToUint64(accountInfo.SequenceNumber), nil
 }
 
+func (n CedraNode) WaitTxByHash(txHash string) (TransactionDTO, error) {
+	var body io.Reader
+	var headers map[string]string
+	requestURL := n.nodeURL.JoinPath("transactions/wait_by_hash", txHash)
+
+	tx, err := makeRequest[TransactionDTO](http.MethodGet, requestURL, body, headers, n.httpClient)
+	if err != nil {
+		return TransactionDTO{}, errors.Wrap(err, "can't whait for requested transaction")
+	}
+
+	return tx, nil
+}
+
 // makeRequest performs an HTTP request to the Cedra node and unmarshals the JSON response.
 // It is a generic function that can handle different response types.
 // Returns the unmarshaled response or an error if the request fails.

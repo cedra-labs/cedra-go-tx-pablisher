@@ -21,5 +21,9 @@ type EstimateGasPriceDTO struct {
 // TransactionDTO represents the transaction response from the Cedra node API.
 type TransactionDTO struct {
 	// Hash is the transaction hash returned after submission.
-	Hash string
+	Hash string `json:"hash"`
+
+	VMStatus string `json:"vm_status"`
+
+	TxType string `json:"type"`
 }
