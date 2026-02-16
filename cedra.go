@@ -116,6 +116,10 @@ func (c CedraClient) SubmitTransaction(tx []byte, auth CedraAuthenticator) (stri
 	return hash, nil
 }
 
+// IsTxExecuted checks if a transaction has been successfully executed on the blockchain.
+// It polls the node at regular intervals (100ms) until the transaction is executed or a timeout occurs (15 seconds).
+// The context can be used to cancel the operation or extend the timeout.
+// Returns true if the transaction has been executed successfully, false if it times out, or an error if the check fails.
 func (c CedraClient) IsTxExecuted(ctx context.Context, txHash string) (bool, error) {
 	const period = 100 * time.Millisecond
 	const timeoutDuration = 15 * time.Second

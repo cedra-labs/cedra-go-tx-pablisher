@@ -103,6 +103,9 @@ func (n CedraNode) GetSequenceNumber(address string) (uint64, error) {
 	return cast.ToUint64(accountInfo.SequenceNumber), nil
 }
 
+// WaitTxByHash waits for a transaction to be processed and returns its status from the Cedra node.
+// This method queries the node's wait endpoint for the specified transaction hash.
+// Returns the transaction DTO containing the transaction details and status, or an error if the request fails.
 func (n CedraNode) WaitTxByHash(txHash string) (TransactionDTO, error) {
 	var body io.Reader
 	var headers map[string]string
@@ -110,7 +113,7 @@ func (n CedraNode) WaitTxByHash(txHash string) (TransactionDTO, error) {
 
 	tx, err := makeRequest[TransactionDTO](http.MethodGet, requestURL, body, headers, n.httpClient)
 	if err != nil {
-		return TransactionDTO{}, errors.Wrap(err, "can't whait for requested transaction")
+		return TransactionDTO{}, errors.Wrap(err, "can't wait for requested transaction")
 	}
 
 	return tx, nil

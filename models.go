@@ -22,8 +22,8 @@ type EstimateGasPriceDTO struct {
 type TransactionDTO struct {
 	// Hash is the transaction hash returned after submission.
 	Hash string `json:"hash"`
-
+	// VMStatus is the virtual machine execution status of the transaction (e.g., "Executed successfully").
 	VMStatus string `json:"vm_status"`
-
+	// TxType is the type of the transaction (e.g., "pending_transaction" for pending transactions).
 	TxType string `json:"type"`
 }
