@@ -57,11 +57,15 @@ func (c CedraClient) NewTransaction(sender Account, payload *TransactionPayload,
 	for i, option := range options {
 		switch opt := option.(type) {
 		case SequenceNumber:
-			seqNumber = opt
-			needSeqNum = false
+			if opt.ToUint64() != 0 {
+				seqNumber = opt
+				needSeqNum = false
+			}
 		case GasUnitPrice:
-			gasPrice = opt
-			needGasEst = false
+			if opt.ToUint64() != 0 {
+				gasPrice = opt
+				needGasEst = false
+			}
 		default:
 			return nil, errors.Errorf("NewTransaction: unknown option type %T at index %d", option, i)
 		}
