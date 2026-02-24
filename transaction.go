@@ -12,6 +12,36 @@ const (
 	transactionPrefix = "CEDRA::RawTransaction"
 )
 
+type SequenceNumber uint64
+
+func (s SequenceNumber) ToUint64() uint64 {
+	return uint64(s)
+}
+
+func (s SequenceNumber) ToBCSBytes() []byte {
+	return EncodeUintToBCS(s.ToUint64())
+}
+
+type MaxGasAmount uint64
+
+func (s MaxGasAmount) ToUint64() uint64 {
+	return uint64(s)
+}
+
+func (s MaxGasAmount) ToBCSBytes() []byte {
+	return EncodeUintToBCS(s.ToUint64())
+}
+
+type GasUnitPrice uint64
+
+func (s GasUnitPrice) ToUint64() uint64 {
+	return uint64(s)
+}
+
+func (s GasUnitPrice) ToBCSBytes() []byte {
+	return EncodeUintToBCS(s.ToUint64())
+}
+
 // Transaction represents a complete Cedra blockchain transaction.
 // Fields are grouped by size for optimal memory alignment.
 type Transaction struct {
@@ -22,11 +52,11 @@ type Transaction struct {
 	// FaAddress is the struct tag for the fee asset (coin type).
 	FaAddress StructTag
 	// SequenceNumber is the sequence number for the sender account.
-	SequenceNumber uint64
+	SequenceNumber SequenceNumber
 	// MaxGasAmount is the maximum amount of gas units the transaction can consume.
-	MaxGasAmount uint64
+	MaxGasAmount MaxGasAmount
 	// GasUnitPrice is the price per gas unit.
-	GasUnitPrice uint64
+	GasUnitPrice GasUnitPrice
 	// ExpirationTimestampSeconds is the Unix timestamp when the transaction expires.
 	ExpirationTimestampSeconds uint64
 	// ChainId identifies the blockchain network.
@@ -46,10 +76,10 @@ func (tx *Transaction) ToBCSBytes() []byte {
 	bcs := NewBCSEncoder()
 	defer bcs.buf.Reset()
 	bcs.WriteRawBytes(tx.Sender.AccountAddress[:])
-	bcs.WriteRawBytes(EncodeUintToBCS(tx.SequenceNumber))
+	bcs.WriteRawBytes(tx.SequenceNumber.ToBCSBytes())
 	bcs.WriteRawBytes(tx.Payload.ToBCSBytes())
-	bcs.WriteRawBytes(EncodeUintToBCS(tx.MaxGasAmount))
-	bcs.WriteRawBytes(EncodeUintToBCS(tx.GasUnitPrice))
+	bcs.WriteRawBytes(tx.MaxGasAmount.ToBCSBytes())
+	bcs.WriteRawBytes(tx.GasUnitPrice.ToBCSBytes())
 	bcs.WriteRawBytes(EncodeUintToBCS(tx.ExpirationTimestampSeconds))
 	bcs.WriteRawBytes(EncodeUintToBCS(tx.ChainId))
 	bcs.WriteRawBytes(tx.FaAddress.ToBCSBytes())

@@ -12,7 +12,7 @@ import (
 
 const (
 	// defaultMaxGasAmount is the default maximum gas amount for transactions.
-	defaultMaxGasAmount = uint64(100_000)
+	defaultMaxGasAmount = MaxGasAmount(100_000)
 	// CedraAddress is the canonical address of the Cedra system.
 	CedraAddress = "0x0000000000000000000000000000000000000000000000000000000000000001"
 	// CedraCoin is the full struct tag for the Cedra coin type.
@@ -41,46 +41,81 @@ func NewCedraClient(chainID ChainID) CedraClient {
 }
 
 // NewTransaction creates a new transaction with the provided sender and payload.
-// It concurrently fetches the sequence number and gas price estimate from the network.
+// It concurrently fetches the sequence number and gas price estimate from the network if not provided via options.
 // The transaction expiration is set to 5 minutes from creation time.
+// Options can include SequenceNumber and GasUnitPrice to skip network calls.
 // Returns an error if the sequence number cannot be fetched or if the struct tag is invalid.
-func (c CedraClient) NewTransaction(sender Account, payload *TransactionPayload) (*Transaction, error) {
-	type seqResult struct {
-		value uint64
-		err   error
-	}
-	type gasResult struct {
-		value uint64
-		err   error
+func (c CedraClient) NewTransaction(sender Account, payload *TransactionPayload, options ...any) (*Transaction, error) {
+	var (
+		seqNumber  SequenceNumber
+		gasPrice   GasUnitPrice
+		needSeqNum = true
+		needGasEst = true
+	)
+
+	// Parse options
+	for i, option := range options {
+		switch opt := option.(type) {
+		case SequenceNumber:
+			seqNumber = opt
+			needSeqNum = false
+		case GasUnitPrice:
+			gasPrice = opt
+			needGasEst = false
+		default:
+			return nil, errors.Errorf("NewTransaction: unknown option type %T at index %d", option, i)
+		}
 	}
 
 	expirationSeconds := cast.ToUint64(time.Now().Unix() + 300)
-	seqChan := make(chan seqResult, 1)
-	gasChan := make(chan gasResult, 1)
 
-	// Fetch sequence number
-	go func() {
-		seqNum, err := c.node.GetSequenceNumber(sender.GetAccountAddressString())
-		seqChan <- seqResult{value: seqNum, err: err}
-	}()
-
-	// Fetch gas price estimate (non-critical, can fail)
-	go func() {
-		estimate, err := c.node.GetEstimateGasPrice()
-		gasPrice := uint64(0)
-		if err == nil {
-			gasPrice = estimate.GasEstimate
-		}
-		gasChan <- gasResult{value: gasPrice, err: err}
-	}()
-
-	seqRes := <-seqChan
-	if seqRes.err != nil {
-		return nil, errors.Wrap(seqRes.err, "can't create new transaction: failed to get sequence number")
+	// Fetch sequence number and gas price concurrently if needed
+	type seqResult struct {
+		value SequenceNumber
+		err   error
+	}
+	type gasResult struct {
+		value GasUnitPrice
+		err   error
 	}
 
-	gasRes := <-gasChan
-	// Gas price estimation failure is non-critical, we can proceed with 0
+	var seqChan chan seqResult
+	var gasChan chan gasResult
+
+	if needSeqNum {
+		seqChan = make(chan seqResult, 1)
+		go func() {
+			seqNum, err := c.GetSequenceNumber(sender.GetAccountAddressString())
+			seqChan <- seqResult{value: SequenceNumber(seqNum), err: err}
+		}()
+	}
+
+	if needGasEst {
+		gasChan = make(chan gasResult, 1)
+		go func() {
+			estimate, err := c.node.GetEstimateGasPrice()
+			gasEstimate := GasUnitPrice(0)
+			if err == nil {
+				gasEstimate = GasUnitPrice(estimate.GasEstimate)
+			}
+			gasChan <- gasResult{value: gasEstimate, err: err}
+		}()
+	}
+
+	// Collect results
+	if needSeqNum {
+		seqRes := <-seqChan
+		if seqRes.err != nil {
+			return nil, errors.Wrap(seqRes.err, "can't create new transaction: failed to get sequence number")
+		}
+		seqNumber = seqRes.value
+	}
+
+	if needGasEst {
+		gasRes := <-gasChan
+		// Gas price estimation failure is non-critical, we can proceed with 0
+		gasPrice = gasRes.value
+	}
 
 	structTag, err := NewStringStructTag(CedraCoin)
 	if err != nil {
@@ -89,10 +124,10 @@ func (c CedraClient) NewTransaction(sender Account, payload *TransactionPayload)
 
 	return &Transaction{
 		Sender:                     sender,
-		SequenceNumber:             seqRes.value,
+		SequenceNumber:             seqNumber,
 		Payload:                    *payload,
 		FaAddress:                  structTag,
-		GasUnitPrice:               gasRes.value,
+		GasUnitPrice:               gasPrice,
 		MaxGasAmount:               defaultMaxGasAmount,
 		ExpirationTimestampSeconds: expirationSeconds,
 		ChainId:                    uint8(c.chainID),
@@ -127,6 +162,7 @@ func (c CedraClient) IsTxExecuted(ctx context.Context, txHash string) (bool, err
 	defer cancel()
 
 	ticker := time.NewTicker(period)
+	defer ticker.Stop()
 	for {
 		select {
 		case <-ctx.Done():
@@ -141,4 +177,10 @@ func (c CedraClient) IsTxExecuted(ctx context.Context, txHash string) (bool, err
 			}
 		}
 	}
+}
+
+// GetSequenceNumber retrieves the current sequence number for the specified account address.
+// Returns the sequence number as a uint64, or an error if the request fails.
+func (c CedraClient) GetSequenceNumber(address string) (uint64, error) {
+	return c.node.GetSequenceNumber(address)
 }

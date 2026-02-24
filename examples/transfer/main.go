@@ -9,9 +9,9 @@ import (
 
 const (
 	// sender private key.
-	privateKey = "sedner_private_key"
+	privateKey = "0x1b542690da83a0c3507e9e8c6ac03be689863d5241483b206a8f5ffd1fefd540"
 	// receiver account address.
-	receiverAddress        = "reciver_address"
+	receiverAddress        = "c745ffa4f97fa9739fae0cb173996f70bb8e4b0310fa781ccca2f7dc13f7db06"
 	transferAmount  uint64 = 100000000 // 1 Cedra coin.
 )
 
